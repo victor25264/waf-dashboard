@@ -1,6 +1,6 @@
 from src.model.user import db, User
 from src.dashboard.dash_app import DashAppFactory
-from flask import Flask, redirect, render_template, request, session, url_for
+from flask import Flask, app, redirect, render_template, request, session, url_for
 import os
 from dotenv import load_dotenv
 from src.waf_data.waf_data_getter import WAFDataGetter
@@ -13,6 +13,7 @@ load_dotenv()
 
 server = Flask(__name__)
 server.config['SECRET_KEY'] = os.getenv("SECRET_KEY")
+server.config['MAX_LOGIN_ATTEMPTS'] = 3
 
 data_statistics = DataStatistics()
 
@@ -45,7 +46,6 @@ with server.app_context():
         admin_user.set_password('password123') # username: admin, password: password123
         db.session.add(admin_user)
         db.session.commit()
-        print("Default admin user created: username='admin', password='password123'")
     
 
 dash_factory = DashAppFactory(server, data_statistics, health_checker, waf_data_getter )
@@ -56,6 +56,10 @@ def login():
         username = request.form['username']
         password = request.form['password']
         
+        if 'login_attempts' in session and session['login_attempts'] >= server.config['MAX_LOGIN_ATTEMPTS']:
+            return 'Account locked. Please try again later.'
+
+
         user = User.query.filter_by(username=username).first()
         
         if user and user.check_password(password):
@@ -63,6 +67,7 @@ def login():
             session['username'] = username
             return redirect(url_for(dash_app_instance.config["url_base_pathname"])) # Redirect to Dash app
         else:
+            session['login_attempts'] = session.get('login_attempts', 0) + 1
             return render_template('login.html', error='Invalid credentials'), 401
     return render_template('login.html')
 
