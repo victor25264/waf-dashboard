@@ -1,6 +1,6 @@
 from unittest.mock import Mock, MagicMock
 import pandas as pd
-from waf_data.waf_data_getter import WAFDataGetter
+from src.waf_data.waf_data_getter import WAFDataGetter
 import requests
 import pytest
 

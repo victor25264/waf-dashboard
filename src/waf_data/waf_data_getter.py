@@ -10,12 +10,13 @@ class WAFDataGetter:
         self.http_client = http_client
 
     def __get_waf_data(self, start_time:float, end_time:float):
-        response = self.http_client.get(self.data_location, headers={"Authorization": f"Bearer {self.secret}"}, params={"start": start_time, "end": end_time})
-        if response.status_code == 200:
-            response = response.json()
-            return response["data"]
-        else:
-            response.raise_for_status()
+        try:
+            response = self.http_client.get(self.data_location, headers={"Authorization": f"Bearer {self.secret}"}, params={"start": start_time, "end": end_time})
+            if response.status_code == 200:
+                response = response.json()
+                return response["data"]
+        except Exception as e:
+            return []
 
     def get_waf_data(self, start_time:float=None, end_time:float=None):
         if start_time is None:

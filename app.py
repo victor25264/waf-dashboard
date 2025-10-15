@@ -1,13 +1,33 @@
-from model.user import db, User
-from dashboard.dash_app import DashAppFactory
+from src.model.user import db, User
+from src.dashboard.dash_app import DashAppFactory
 from flask import Flask, redirect, render_template, request, session, url_for
 import os
 from dotenv import load_dotenv
+from src.waf_data.waf_data_getter import WAFDataGetter
+from src.waf_data.health_checker import  HealthChecker
+from src.data_processor.data_statistics import DataStatistics
+import requests
+
 
 load_dotenv()
 
 server = Flask(__name__)
 server.config['SECRET_KEY'] = os.getenv("SECRET_KEY")
+
+data_statistics = DataStatistics()
+
+waf_data_getter = WAFDataGetter(
+    data_location=os.getenv("WAF_LOGS"),
+    secret=os.getenv("WAF_TOKEN"),
+    http_client=requests
+)
+
+health_checker = HealthChecker(
+    url=os.getenv("WAF_HEALTH_CHECK_URL"),
+    token=os.getenv("WAF_TOKEN"),
+    http_client=requests
+)
+
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 server.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'dashboard.db')
@@ -27,7 +47,8 @@ with server.app_context():
         db.session.commit()
         print("Default admin user created: username='admin', password='password123'")
     
-dash_factory = DashAppFactory(server)
+
+dash_factory = DashAppFactory(server, data_statistics, health_checker, waf_data_getter )
    
 @server.route('/login', methods=['GET', 'POST'])
 def login():
